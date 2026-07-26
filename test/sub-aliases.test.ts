@@ -29,7 +29,7 @@ import { makeCodexModel } from "./support/models.js";
 
 type AnthropicModel = Model<"anthropic-messages">;
 
-test("default entry point activates with real deps against stock pi-ai", (t) => {
+test("default entry point registers aliases with real deps against stock pi-ai", (t) => {
   const agentDir = mkdtempSync(join(tmpdir(), "pi-sub-aliases-agent-"));
   const savedAgentDir = process.env.PI_CODING_AGENT_DIR;
   process.env.PI_CODING_AGENT_DIR = agentDir;
@@ -52,12 +52,15 @@ test("default entry point activates with real deps against stock pi-ai", (t) => 
   const pi = new FakePi();
   subAliases(pi as unknown as ExtensionAPI);
 
-  // Stock pi-ai lacks the OAuth compat exports: the alias is reported as a
-  // config error instead of registered, and the handlers still attach.
-  assert.equal(pi.providers.size, 0);
+  // End-to-end against the real pi-ai the extension ships against: the
+  // built-in OAuth flow and model catalog resolve without any patched install.
+  const provider = pi.providers.get("anthropic-work");
+  assert.ok(provider, "anthropic-work was not registered");
+  assert.ok(provider.oauth?.name.endsWith(" - Work"));
+  assert.ok((provider.models?.length ?? 0) > 0, "no models projected");
   assert.ok(pi.handlers.has("session_start"));
   assert.ok(pi.handlers.has("session_shutdown"));
-  assert.match(warnings.join("\n"), /anthropic-work: .*run pi-repatch/);
+  assert.equal(warnings.join("\n"), "");
 });
 
 test("registers config-driven aliases with the expected provider ids and login names", () => {
@@ -143,7 +146,7 @@ test("keeps healthy providers when another provider's oauth is unavailable", () 
       aliases,
       getOAuthProvider: (provider) => {
         if (provider === "openai-codex") {
-          throw new Error("compat does not export openaiCodexOAuth");
+          throw new Error("no OAuth flow for built-in provider openai-codex");
         }
         return makeOAuthProvider("Anthropic (Claude Pro/Max)");
       },
@@ -160,7 +163,7 @@ test("keeps healthy providers when another provider's oauth is unavailable", () 
   assert.equal(ctx.ui.notifications.length, 1);
   assert.match(
     ctx.ui.notifications[0]?.message ?? "",
-    /openai-codex-work: compat does not export openaiCodexOAuth/,
+    /openai-codex-work: no OAuth flow for built-in provider openai-codex/,
   );
 });
 

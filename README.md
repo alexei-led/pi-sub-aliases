@@ -30,16 +30,8 @@ codex-work · gpt-5.5
 
 ## Requirements
 
-Tested against pi 0.80.x (the extension adapts the pi-ai 0.80 OAuth interface).
-
-Stock `@earendil-works/pi-ai` does not re-export the built-in OAuth providers
-(`anthropicOAuth`, `openaiCodexOAuth`) from its `compat` module. The installed pi-ai
-must be patched to re-export them (e.g. a `pi-repatch` script). Without the patch,
-the affected provider's aliases are skipped and reported with:
-
-```text
-@earendil-works/pi-ai/compat does not export anthropicOAuth; run pi-repatch
-```
+Pi 0.82.1 or newer. Nothing else — aliases reuse Pi's own built-in OAuth flows
+and model catalog on a stock install.
 
 ## Install
 

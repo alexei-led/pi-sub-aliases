@@ -33,9 +33,9 @@ export function createCodexEnvSync(
   schedule: (fn: () => void, delayMs: number) => void = (fn, delayMs) => {
     setTimeout(fn, delayMs);
   },
-  // pi 0.80 does not expose modelRegistry.authStorage to extensions, so the
-  // in-memory path is a forward-compat probe; auth.json (via pi's public
-  // readStoredCredential) is the working credential source today.
+  // pi does not expose modelRegistry.authStorage to extensions, so that path is
+  // a forward-compat probe; auth.json (via pi's public readStoredCredential) is
+  // the working credential source.
   readCredential: (providerId: string) => unknown = (providerId) =>
     readStoredCredential(providerId),
 ): CodexEnvSync {

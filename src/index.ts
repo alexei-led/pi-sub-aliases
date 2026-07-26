@@ -9,7 +9,7 @@ import {
   type AliasLoadOptions,
   type AliasLoadResult,
 } from "./config.js";
-import { wrapOAuth, type WrappedOAuthProvider } from "./oauth.js";
+import { resolveBuiltinOAuth, type WrappedOAuthProvider } from "./oauth.js";
 import {
   PROVIDER_NAMES,
   PROVIDER_SPECS,
@@ -44,10 +44,11 @@ export type SubAliasesDeps = {
 
 const defaultDeps = (): SubAliasesDeps => ({
   getModels: (provider) => piAiCompat.getModels(provider),
-  // Resolved lazily per provider at alias registration time; the OAuth
-  // exports only exist on a pi-repatch'd install.
+  // Resolved per provider at alias registration time from pi's own built-in
+  // provider table, so a pi upgrade cannot strip the OAuth flow out from under
+  // the aliases.
   getOAuthProvider: (provider) =>
-    wrapOAuth(PROVIDER_SPECS[provider].oauthExport),
+    resolveBuiltinOAuth(PROVIDER_SPECS[provider].builtin),
   loadAliases,
 });
 
@@ -252,8 +253,8 @@ function syncRegisteredProviders(
   const providerIds = new Set<string>();
   const errors: string[] = [];
 
-  // Per-alias isolation: one provider's failure (e.g. a pi-repatch that lacks
-  // its OAuth export) must not take down the other provider's aliases.
+  // Per-alias isolation: one provider's failure (e.g. a pi release that drops
+  // its built-in OAuth flow) must not take down the other provider's aliases.
   for (const alias of aliases) {
     try {
       registerAlias(

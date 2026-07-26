@@ -5,7 +5,8 @@ import type {
   OAuthCredentials,
   OAuthLoginCallbacks,
 } from "@earendil-works/pi-ai/compat";
-import { adaptOAuth, wrapOAuth } from "../src/oauth.js";
+import { PROVIDER_NAMES } from "../src/providers.js";
+import { adaptOAuth, resolveBuiltinOAuth } from "../src/oauth.js";
 
 type OAuthCredential = Awaited<ReturnType<OAuthAuth["login"]>>;
 
@@ -16,15 +17,22 @@ const CREDENTIAL: OAuthCredential = {
   expires: 4_102_444_800_000,
 };
 
-test("wrapOAuth reports missing compat exports with a pi-repatch hint", () => {
-  // Hermetic: stock pi-ai does not re-export the OAuth providers.
+test("resolveBuiltinOAuth adapts every aliased provider's built-in flow", () => {
+  // Guards the pi upgrade that removes a built-in OAuth flow, renames a
+  // provider id, or drops the providers/all entrypoint.
+  for (const provider of PROVIDER_NAMES) {
+    const resolved = resolveBuiltinOAuth(provider);
+    assert.ok(resolved.name.length > 0, `${provider} has no display name`);
+    assert.equal(typeof resolved.login, "function");
+    assert.equal(typeof resolved.refreshToken, "function");
+    assert.equal(resolved.getApiKey(makeLegacyCredentials("tok")), "tok");
+  }
+});
+
+test("resolveBuiltinOAuth rejects a provider with no built-in OAuth flow", () => {
   assert.throws(
-    () => wrapOAuth("anthropicOAuth"),
-    /anthropicOAuth; run pi-repatch/,
-  );
-  assert.throws(
-    () => wrapOAuth("openaiCodexOAuth"),
-    /openaiCodexOAuth; run pi-repatch/,
+    () => resolveBuiltinOAuth("not-a-provider"),
+    /no OAuth flow for built-in provider not-a-provider/,
   );
 });
 

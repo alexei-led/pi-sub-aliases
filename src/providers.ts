@@ -2,7 +2,6 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { Api, Model } from "@earendil-works/pi-ai/compat";
 import { createCodexEnvSync } from "./codex-env.js";
 import { wrapCodexStream } from "./codex-stream.js";
-import type { OAuthExportName } from "./oauth.js";
 
 export const PROVIDER_NAMES = ["anthropic", "openai-codex"] as const;
 
@@ -23,9 +22,9 @@ export type EventBusLike = {
   emit(channel: string, data: unknown): void;
 };
 
-// `authStorage` is an undocumented pi internal (absent from the stock
-// ModelRegistry type, and absent at runtime on pi 0.80 — codex-env falls back
-// to auth.json). `find` is not consumed here but is load-bearing: without a
+// `authStorage` is an undocumented pi internal, absent from the stock
+// ModelRegistry type and so far absent at runtime; codex-env falls back to
+// auth.json. `find` is not consumed here but is load-bearing: without a
 // required member the type is "weak" and TS rejects assigning the real
 // ModelRegistry to it (TS2559: no properties in common).
 export type SyncEnvModelRegistry = {
@@ -53,7 +52,6 @@ export type ProviderSpec = {
   builtin: ProviderName;
   api: Api;
   fallbackBaseUrl: string;
-  oauthExport: OAuthExportName;
   handlePrefix: string;
   footerLabel(modelId: string): string;
   wrapStream?: WrapStreamHook;
@@ -68,7 +66,6 @@ export const PROVIDER_SPECS: Record<ProviderName, ProviderSpec> = {
     builtin: "anthropic",
     api: "anthropic-messages",
     fallbackBaseUrl: "https://api.anthropic.com",
-    oauthExport: "anthropicOAuth",
     handlePrefix: "claude",
     footerLabel: claudeShortLabel,
   },
@@ -76,7 +73,6 @@ export const PROVIDER_SPECS: Record<ProviderName, ProviderSpec> = {
     builtin: "openai-codex",
     api: "openai-codex-responses",
     fallbackBaseUrl: "https://chatgpt.com/backend-api",
-    oauthExport: "openaiCodexOAuth",
     handlePrefix: "codex",
     // Codex model ids (gpt-5.5, ...) are short already.
     footerLabel: (modelId) => modelId,

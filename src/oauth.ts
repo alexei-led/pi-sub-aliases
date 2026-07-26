@@ -1,11 +1,9 @@
-import * as piAiCompat from "@earendil-works/pi-ai/compat";
 import type {
   OAuthAuth,
   OAuthCredentials,
   OAuthLoginCallbacks,
 } from "@earendil-works/pi-ai/compat";
-
-export type OAuthExportName = "anthropicOAuth" | "openaiCodexOAuth";
+import { builtinProviders } from "@earendil-works/pi-ai/providers/all";
 
 export type WrappedOAuthProvider = {
   name: string;
@@ -14,26 +12,29 @@ export type WrappedOAuthProvider = {
   getApiKey(credentials: OAuthCredentials): string;
 };
 
-// Stock pi-ai 0.80 compat does not re-export the OAuth providers; the
-// pi-repatch'd install does. Resolve lazily via the namespace so the module
-// still loads (and tests run) against stock pi-ai.
-export function wrapOAuth(oauthExport: OAuthExportName): WrappedOAuthProvider {
-  const oauth = (piAiCompat as Partial<Record<OAuthExportName, OAuthAuth>>)[
-    oauthExport
-  ];
+// builtinProviders() rebuilds every provider and its model catalog on each
+// call; the built-in set is static for the process.
+let builtins:
+  readonly { id: string; auth?: { oauth?: OAuthAuth } }[] | undefined;
+
+// Import via "providers/all": pi's extension loader maps it to the same pi-ai
+// the agent itself runs, so aliases share pi's built-in OAuth flows rather than
+// a second copy with its own credential state.
+export function resolveBuiltinOAuth(providerId: string): WrappedOAuthProvider {
+  builtins ??= builtinProviders();
+  const oauth = builtins.find((provider) => provider.id === providerId)?.auth
+    ?.oauth;
   if (!oauth) {
     throw new Error(
-      `@earendil-works/pi-ai/compat does not export ${oauthExport}; run pi-repatch`,
+      `@earendil-works/pi-ai exposes no OAuth flow for built-in provider ${providerId}`,
     );
   }
   return adaptOAuth(oauth);
 }
 
-// pi's runtime (provider-composer) consumes the pre-0.80 oauth shape:
-// old-style login callbacks, refreshToken, and a synchronous getApiKey.
-// Adapt the 0.80 OAuthAuth interface (login(interaction)/refresh/toAuth).
-// Exported for tests: on stock pi-ai the compat exports are absent, so the
-// adapter is otherwise unreachable in CI.
+// pi's provider-composer expects callback-style login, refreshToken, and a
+// synchronous getApiKey; the built-in flows expose login(interaction)/refresh/
+// toAuth. Bridge the two.
 export function adaptOAuth(oauth: OAuthAuth): WrappedOAuthProvider {
   return {
     name: oauth.name,

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.1
+
+### Fixed
+
+- Aliases work on a stock pi install. OAuth flows now come from
+  `@earendil-works/pi-ai/providers/all` instead of `pi-ai/compat`, which never
+  exported them — previously every alias silently disappeared (no login entries,
+  no alias models) unless pi-ai was patched locally.
+
+### Changed
+
+- Requires Pi 0.82.1 or newer (declared as `>=0.82.1`, no upper bound)
+
 ## 0.2.0
 
 ### Breaking
