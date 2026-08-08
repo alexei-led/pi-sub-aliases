@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.2
+
+### Fixed
+
+- Every aliased provider — Claude and Codex alike — stopped working once its
+  OAuth access token expired. `adaptOAuth` dropped the `AbortSignal` pi passes
+  as the second argument to `refreshToken`, and pi-ai's token request builds
+  `AbortSignal.any([signal, timeout])`, which throws `ERR_INVALID_ARG_TYPE` on
+  `undefined`. Every request then failed with `OAuth refresh failed for
+  <alias>`, and the only recovery was a fresh login.
+
 ## 0.2.1
 
 ### Fixed

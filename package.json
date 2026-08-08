@@ -1,6 +1,6 @@
 {
   "name": "pi-sub-aliases",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Pi extension that adds named subscription-account aliases for the built-in Anthropic and OpenAI Codex OAuth providers.",
   "type": "module",
   "main": "./src/index.ts",

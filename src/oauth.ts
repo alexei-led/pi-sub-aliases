@@ -8,7 +8,10 @@ import { builtinProviders } from "@earendil-works/pi-ai/providers/all";
 export type WrappedOAuthProvider = {
   name: string;
   login(callbacks: OAuthLoginCallbacks): Promise<OAuthCredentials>;
-  refreshToken(credentials: OAuthCredentials): Promise<OAuthCredentials>;
+  refreshToken(
+    credentials: OAuthCredentials,
+    signal?: AbortSignal,
+  ): Promise<OAuthCredentials>;
   getApiKey(credentials: OAuthCredentials): string;
 };
 
@@ -76,8 +79,11 @@ export function adaptOAuth(oauth: OAuthAuth): WrappedOAuthProvider {
           });
         },
       }),
-    refreshToken: (credentials) =>
-      oauth.refresh({ ...credentials, type: "oauth" }),
+    // pi passes an AbortSignal as the second argument and pi-ai's OAuth
+    // token request builds `AbortSignal.any([signal, timeout])`, which throws
+    // ERR_INVALID_ARG_TYPE when the signal is dropped. Forward it.
+    refreshToken: (credentials, signal) =>
+      oauth.refresh({ ...credentials, type: "oauth" }, signal),
     // toAuth() is async but pi needs a sync string; for both providers the
     // OAuth access token is the api key (mirrors pi's own extension docs).
     getApiKey: (credentials) => credentials.access,

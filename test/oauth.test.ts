@@ -190,6 +190,44 @@ test("refreshToken re-tags the stored credential as oauth", async () => {
   assert.equal(refreshed.access, "new-access");
 });
 
+test("refreshToken forwards the abort signal to the built-in flow", async () => {
+  const controller = new AbortController();
+  let seenSignal: AbortSignal | undefined;
+  const adapted = adaptOAuth(
+    makeFakeOAuth(undefined, (credential, signal) => {
+      seenSignal = signal;
+      return Promise.resolve(credential);
+    }),
+  );
+
+  await adapted.refreshToken(makeLegacyCredentials("old"), controller.signal);
+
+  assert.equal(seenSignal, controller.signal);
+});
+
+test("refreshToken hands pi-ai a signal it can pass to AbortSignal.any", async () => {
+  // pi-ai's OAuth token request builds `AbortSignal.any([signal, timeout])`.
+  // Dropping the signal made that throw ERR_INVALID_ARG_TYPE, which surfaced
+  // as "OAuth refresh failed for <alias>" and broke every aliased provider.
+  let received: AbortSignal | undefined;
+  const adapted = adaptOAuth(
+    makeFakeOAuth(undefined, (credential, signal) => {
+      received = signal;
+      return Promise.resolve(credential);
+    }),
+  );
+
+  await adapted.refreshToken(
+    makeLegacyCredentials("old"),
+    AbortSignal.timeout(60_000),
+  );
+
+  assert.ok(received instanceof AbortSignal);
+  assert.doesNotThrow(() =>
+    AbortSignal.any([received as AbortSignal, AbortSignal.timeout(60_000)]),
+  );
+});
+
 function makeFakeOAuth(
   login?: OAuthAuth["login"],
   refresh?: OAuthAuth["refresh"],
