@@ -7,7 +7,7 @@ import type {
   AssistantMessage,
   AssistantMessageEvent,
   AssistantMessageEventStream,
-  Context,
+  TranscriptContext,
   Model,
   SimpleStreamOptions,
 } from "@earendil-works/pi-ai/compat";
@@ -20,7 +20,7 @@ const CODEX_BUILTIN_API = "openai-codex-responses";
 export type CodexStreamDeps = {
   streamSimple(
     model: Model<Api>,
-    context: Context,
+    context: TranscriptContext,
     options?: SimpleStreamOptions,
   ): AssistantMessageEventStream;
 };
@@ -128,10 +128,10 @@ const CODEX_STOCK_SENTINEL_PROVIDER = "openai-codex#stock";
 //   boundary the aliases exist for. The sentinel forces the same graceful
 //   cross-provider path other aliases get.
 function rewriteContextToBuiltin(
-  context: Context,
+  context: TranscriptContext,
   providerId: string,
   aliasApi: string,
-): Context {
+): TranscriptContext {
   return {
     ...context,
     messages: context.messages.map((message) => {

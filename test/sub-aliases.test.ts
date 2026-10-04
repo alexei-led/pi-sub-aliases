@@ -115,7 +115,10 @@ test("registers aliases for both providers with per-provider models and oauth", 
   assert.equal(typeof codex.streamSimple, "function");
   assert.equal(codex.oauth?.name, "ChatGPT (Codex) - Codex Work");
   const registeredCodexModel = codex.models?.[0];
-  assert.ok(registeredCodexModel);
+  assert.ok(
+    registeredCodexModel &&
+    (registeredCodexModel.type === undefined || registeredCodexModel.type === "chat"),
+  );
   assert.equal(registeredCodexModel.id, codexModel.id);
   assert.equal(registeredCodexModel.name, "GPT 5.5 (Codex Work)");
   assert.equal(registeredCodexModel.api, "openai-codex-work-responses");
@@ -216,7 +219,9 @@ test("copies source models and preserves metadata", () => {
   );
 
   const aliasModel = pi.providers.get(alias.providerId)?.models?.[0];
-  assert.ok(aliasModel);
+  assert.ok(aliasModel &&
+    (aliasModel.type === undefined || aliasModel.type === "chat"));
+
   assert.equal(aliasModel.id, sourceModel.id);
   assert.equal(aliasModel.name, "Claude Opus 4.8 (Work)");
   assert.equal(aliasModel.api, sourceModel.api);

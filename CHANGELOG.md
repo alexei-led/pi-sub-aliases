@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.3
+
+### Changed
+
+- Support Pi 1.x starting at 1.0.2 with matching development and peer ranges for
+  `pi-ai` and `pi-coding-agent`.
+- Preserve normalized transcript system messages and tool declarations through
+  Codex alias replay. Account separation and event rewriting are unchanged.
+
+### Fixed
+
+- Supply the abort signal required by native OAuth login and refresh flows when
+  a legacy caller omits it. Supplied signals are still forwarded unchanged.
+
+### Upgrade
+
+Upgrade Pi to 1.0.2 or later in the 1.x line before updating the extension.
+Older Pi versions are outside the supported range. Reload Pi after updating.
+Alias configuration, provider IDs, and stored credentials are unchanged.
+
 ## 0.2.2
 
 ### Fixed

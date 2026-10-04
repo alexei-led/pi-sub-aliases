@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
+import {
+  createAssistantMessageEventStream,
+  getCurrentSystemPrompt,
+  getCurrentTools,
+  normalizeContext,
+} from "@earendil-works/pi-ai";
 import type {
   Api,
   AssistantMessage,
   AssistantMessageEventStream,
-  Context,
+  TranscriptContext,
   Model,
   SimpleStreamOptions,
 } from "@earendil-works/pi-ai/compat";
@@ -38,7 +43,7 @@ test("streams via the builtin codex provider and rewrites events back to the ali
   let captured:
     | {
         model: Model<Api>;
-        context: Context;
+        context: TranscriptContext;
         options: SimpleStreamOptions | undefined;
       }
     | undefined;
@@ -54,7 +59,7 @@ test("streams via the builtin codex provider and rewrites events back to the ali
     provider: ALIAS.providerId,
     api: ALIAS_API,
   };
-  const context: Context = {
+  const context = normalizeContext({
     messages: [
       { role: "user", content: "hello", timestamp: 1 },
       makeAssistantMessage(ALIAS.providerId, ALIAS_API),
@@ -70,7 +75,7 @@ test("streams via the builtin codex provider and rewrites events back to the ali
       // started on stock codex, then switched to this alias).
       makeAssistantMessage("openai-codex"),
     ],
-  };
+  });
 
   assert.ok(wrapped.streamSimple);
   const streamOptions: SimpleStreamOptions = {};
@@ -161,6 +166,45 @@ test("streams via the builtin codex provider and rewrites events back to the ali
   assert.notEqual(errorEvent.error, innerError);
 });
 
+test("preserves normalized system tools and abort options across alias replay", async () => {
+  const inner = createAssistantMessageEventStream();
+  const controller = new AbortController();
+  const tools = [{
+    name: "lookup",
+    description: "Lookup",
+    parameters: { type: "object", properties: {} },
+  }];
+  const context = normalizeContext({
+    systemPrompt: "Test instruction",
+    tools,
+    messages: [makeAssistantMessage(ALIAS.providerId, ALIAS_API)],
+  });
+  const wrapped = wrapCodexStream(makeAliasConfig(), ALIAS, {
+    streamSimple(_model, transcript, options) {
+      assert.equal(getCurrentSystemPrompt(transcript.messages), "Test instruction");
+      assert.deepEqual(getCurrentTools(transcript.messages), tools);
+      assert.equal(options?.signal, controller.signal);
+      return inner;
+    },
+  });
+
+  assert.ok(wrapped.streamSimple);
+  const outer = wrapped.streamSimple(
+    { ...makeCodexModel(), provider: ALIAS.providerId, api: ALIAS_API },
+    context,
+    { signal: controller.signal },
+  );
+  inner.push({
+    type: "done",
+    reason: "stop",
+    message: makeAssistantMessage("openai-codex"),
+  });
+  assert.equal((await outer.result()).provider, ALIAS.providerId);
+  const original = context.messages.at(-1);
+  assert.ok(original?.role === "assistant");
+  assert.equal(original.provider, ALIAS.providerId);
+});
+
 test("forwards the done event with the alias provider", async () => {
   const inner = createAssistantMessageEventStream();
   const wrapped = wrapCodexStream(makeAliasConfig(), ALIAS, {
@@ -170,7 +214,7 @@ test("forwards the done event with the alias provider", async () => {
   assert.ok(wrapped.streamSimple);
   const stream = wrapped.streamSimple(
     { ...makeCodexModel(), provider: ALIAS.providerId, api: ALIAS_API },
-    { messages: [] },
+    normalizeContext({ messages: [] }),
   );
 
   const innerMessage = makeAssistantMessage("openai-codex");
@@ -205,7 +249,7 @@ test("terminates the outer stream with an error event when the inner stream fail
   assert.ok(wrapped.streamSimple);
   const stream = wrapped.streamSimple(
     { ...makeCodexModel(), provider: ALIAS.providerId, api: ALIAS_API },
-    { messages: [] },
+    normalizeContext({ messages: [] }),
   );
 
   const events = [];

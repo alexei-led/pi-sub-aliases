@@ -43,7 +43,7 @@ export function adaptOAuth(oauth: OAuthAuth): WrappedOAuthProvider {
     name: oauth.name,
     login: (callbacks) =>
       oauth.login({
-        ...(callbacks.signal ? { signal: callbacks.signal } : {}),
+        signal: callbacks.signal ?? new AbortController().signal,
         notify: (event) => {
           switch (event.type) {
             case "auth_url":
@@ -79,11 +79,12 @@ export function adaptOAuth(oauth: OAuthAuth): WrappedOAuthProvider {
           });
         },
       }),
-    // pi passes an AbortSignal as the second argument and pi-ai's OAuth
-    // token request builds `AbortSignal.any([signal, timeout])`, which throws
-    // ERR_INVALID_ARG_TYPE when the signal is dropped. Forward it.
+    // Native flows require a signal, including when legacy callers omit it.
     refreshToken: (credentials, signal) =>
-      oauth.refresh({ ...credentials, type: "oauth" }, signal),
+      oauth.refresh(
+        { ...credentials, type: "oauth" },
+        signal ?? new AbortController().signal,
+      ),
     // toAuth() is async but pi needs a sync string; for both providers the
     // OAuth access token is the api key (mirrors pi's own extension docs).
     getApiKey: (credentials) => credentials.access,

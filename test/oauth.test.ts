@@ -149,12 +149,12 @@ test("login resolves a cancelled select to an empty id", async () => {
   assert.equal(answer, "");
 });
 
-test("login forwards the abort signal when present", async () => {
+test("login forwards a supplied signal and provides one when the legacy caller omits it", async () => {
   const controller = new AbortController();
-  let seenSignal: AbortSignal | undefined;
+  const signals: AbortSignal[] = [];
   const adapted = adaptOAuth(
     makeFakeOAuth((interaction) => {
-      seenSignal = interaction.signal;
+      signals.push(interaction.signal);
       return Promise.resolve(CREDENTIAL);
     }),
   );
@@ -162,12 +162,14 @@ test("login forwards the abort signal when present", async () => {
   const { callbacks } = makeCallbacks();
   callbacks.signal = controller.signal;
   await adapted.login(callbacks);
-  assert.equal(seenSignal, controller.signal);
+  assert.equal(signals[0], controller.signal);
 
   delete callbacks.signal;
-  seenSignal = undefined;
   await adapted.login(callbacks);
-  assert.equal(seenSignal, undefined);
+  const fallback = signals[1];
+  assert.ok(fallback instanceof AbortSignal);
+  assert.equal(fallback.aborted, false);
+  assert.doesNotThrow(() => AbortSignal.any([fallback]));
 });
 
 test("refreshToken re-tags the stored credential as oauth", async () => {
@@ -203,6 +205,21 @@ test("refreshToken forwards the abort signal to the built-in flow", async () => 
   await adapted.refreshToken(makeLegacyCredentials("old"), controller.signal);
 
   assert.equal(seenSignal, controller.signal);
+});
+
+test("refreshToken supplies a non-aborted native signal when the legacy caller omits it", async () => {
+  let received: AbortSignal | undefined;
+  const adapted = adaptOAuth(makeFakeOAuth(undefined, (credential, signal) => {
+    received = signal;
+    return Promise.resolve(credential);
+  }));
+
+  await adapted.refreshToken(makeLegacyCredentials("old"));
+
+  const fallback = received;
+  assert.ok(fallback instanceof AbortSignal);
+  assert.equal(fallback.aborted, false);
+  assert.doesNotThrow(() => AbortSignal.any([fallback]));
 });
 
 test("refreshToken hands pi-ai a signal it can pass to AbortSignal.any", async () => {

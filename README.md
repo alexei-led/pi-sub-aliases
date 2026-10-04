@@ -30,8 +30,8 @@ codex-work · gpt-5.5
 
 ## Requirements
 
-Pi 0.82.1 or newer. Nothing else — aliases reuse Pi's own built-in OAuth flows
-and model catalog on a stock install.
+Pi 1.x starting at 1.0.2 (tested with Pi 1.0.2). Aliases reuse Pi's own
+built-in OAuth flows and model catalog on a stock install.
 
 ## Install
 
