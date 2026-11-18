@@ -167,15 +167,13 @@ export function resolveBuiltinModels(
   deps: Pick<SubAliasesDeps, "getModels">,
   modelRegistry?: SyncEnvModelRegistry,
 ): AliasModel[] {
-  const builtinModels = deps
-    .getModels(spec.builtin)
-    .filter((model): model is AliasModel => isModelForApi(model, spec.api));
-  if (!modelRegistry) return builtinModels;
-
-  return builtinModels.map((model) => {
-    const override = modelRegistry.find(spec.builtin, model.id);
-    return isModelForApi(override, spec.api) ? override : model;
-  });
+  const models = modelRegistry
+    ? modelRegistry.getAll()
+    : deps.getModels(spec.builtin);
+  return models.filter(
+    (model): model is AliasModel =>
+      isModelForApi(model, spec.api) && model.provider === spec.builtin,
+  );
 }
 
 export function registerAlias(
