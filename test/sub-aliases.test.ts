@@ -252,13 +252,7 @@ test("uses model registry overrides when refreshing source models", () => {
     maxTokens: 32_000,
     headers: { "x-override": "1" },
   });
-  const modelRegistry: FakeModelRegistry = {
-    find(provider, modelId) {
-      return provider === "anthropic" && modelId === baseModel.id
-        ? overrideModel
-        : undefined;
-    },
-  };
+  const modelRegistry: FakeModelRegistry = { getAll: () => [overrideModel] };
 
   const resolved = resolveBuiltinModels(
     PROVIDER_SPECS.anthropic,
@@ -269,25 +263,47 @@ test("uses model registry overrides when refreshing source models", () => {
   assert.deepEqual(resolved, [overrideModel]);
 });
 
-test("filters foreign-api models and ignores invalid registry overrides", () => {
+test("filters models from other providers and APIs", () => {
   const baseModel = makeModel();
   const codexModel = makeCodexModel();
+  const wrongApi = { ...baseModel, id: "wrong-api", api: "openai-responses" };
+  const wrongProvider = { ...baseModel, provider: "anthropic-other" };
   const modelRegistry: FakeModelRegistry = {
-    find: (provider, modelId) =>
-      provider === "anthropic" && modelId === baseModel.id
-        ? { id: baseModel.id, api: "openai-responses" }
-        : undefined,
+    getAll: () => [baseModel, codexModel, wrongApi, wrongProvider],
   };
-
-  const resolved = resolveBuiltinModels(
-    PROVIDER_SPECS.anthropic,
-    { getModels: () => [baseModel, codexModel] },
-    modelRegistry,
+  assert.deepEqual(
+    resolveBuiltinModels(PROVIDER_SPECS.anthropic, { getModels: () => [] }, modelRegistry),
+    [baseModel],
   );
+});
 
-  // The codex model is filtered out; the wrong-api override falls back to
-  // the base model.
-  assert.deepEqual(resolved, [baseModel]);
+test("discovers registry-only models and tracks catalog updates", () => {
+  const pi = new FakePi();
+  const alias = makeAlias({
+    provider: "openai-codex",
+    slug: "work",
+    handle: "codex-work",
+    label: "Work",
+  });
+  const builtin = makeCodexModel();
+  let models = [builtin, { ...builtin, id: "gpt-6.2-astra", name: "Astra" }];
+  const registry = { getAll: () => models };
+  const ctx = pi.createContext({ modelRegistry: registry });
+  registerSubAliases(
+    pi,
+    makeDeps({ aliases: [alias], getModels: () => [builtin] }),
+  );
+  pi.emit("session_start", ctx);
+  assert.deepEqual(
+    pi.providers.get(alias.providerId)?.models?.map((model) => model.id),
+    ["gpt-5.5", "gpt-6.2-astra"],
+  );
+  models = [{ ...builtin, id: "gpt-6.2-sol", name: "Sol" }];
+  pi.emit("turn_start", ctx);
+  assert.deepEqual(
+    pi.providers.get(alias.providerId)?.models?.map((model) => model.id),
+    ["gpt-6.2-sol"],
+  );
 });
 
 test("registers oauth-capable aliases even when the built-in catalog is empty", () => {
@@ -582,7 +598,7 @@ function saveCodexEnv(t: {
 
 function makeCodexAuthRegistry(): FakeModelRegistry {
   return {
-    find: () => undefined,
+    getAll: () => [],
     authStorage: {
       get: (providerId) =>
         providerId === "openai-codex-work"

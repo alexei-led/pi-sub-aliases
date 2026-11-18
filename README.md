@@ -30,7 +30,7 @@ codex-work · gpt-5.5
 
 ## Requirements
 
-Pi 1.x starting at 1.0.2 (tested with Pi 1.0.2). Aliases reuse Pi's own
+Pi 1.x starting at 1.5.2 (tests use Pi 1.5.2 dependencies). Aliases reuse Pi's own
 built-in OAuth flows and model catalog on a stock install.
 
 ## Install
@@ -77,8 +77,10 @@ Rules:
   providers
 - handles must be unique across global and project config files
 
-Model metadata (context window, max tokens, cost) is always cloned from Pi's live
-model registry at startup — never hardcoded, no config overrides.
+Models and metadata (context window, max tokens, cost) are cloned from Pi’s effective
+model registry when a session starts and on model selection or turns. New models
+from Pi’s catalog or configuration appear after the next refresh event. Initial
+registration uses Pi’s bundled catalog before the session registry is available.
 
 ## Use
 

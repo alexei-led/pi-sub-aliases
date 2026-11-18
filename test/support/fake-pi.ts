@@ -6,13 +6,8 @@ type CapturedProviderConfig = Parameters<
 type Handler = (event: unknown, ctx: unknown) => unknown;
 
 export interface FakeModelRegistry {
-  find(provider: string, modelId: string): ModelLike | undefined;
+  getAll(): readonly unknown[];
   authStorage?: { get(providerId: string): unknown };
-}
-
-interface ModelLike {
-  api?: string;
-  id?: string;
 }
 
 export interface FakeContext {

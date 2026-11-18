@@ -22,13 +22,9 @@ export type EventBusLike = {
   emit(channel: string, data: unknown): void;
 };
 
-// `authStorage` is an undocumented pi internal, absent from the stock
-// ModelRegistry type and so far absent at runtime; codex-env falls back to
-// auth.json. `find` is not consumed here but is load-bearing: without a
-// required member the type is "weak" and TS rejects assigning the real
-// ModelRegistry to it (TS2559: no properties in common).
+// `authStorage` is an undocumented pi internal; codex-env falls back to auth.json.
 export type SyncEnvModelRegistry = {
-  find(provider: string, modelId: string): unknown;
+  getAll(): readonly unknown[];
   authStorage?: { get(providerId: string): unknown } | undefined;
 };
 

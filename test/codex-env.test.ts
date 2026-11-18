@@ -43,7 +43,7 @@ function makeCtx(credentials: unknown, provider = PROVIDER_ID): SyncEnvContext {
   return {
     model: { provider, id: "gpt-5.5" },
     modelRegistry: {
-      find: () => undefined,
+      getAll: () => [],
       authStorage: {
         get: (providerId) =>
           providerId === PROVIDER_ID ? credentials : undefined,
