@@ -1,6 +1,16 @@
 # Changelog
 
-## 0.2.3
+## [0.2.4]
+
+### Changed
+
+- Aliases discover models and metadata from Pi’s effective model registry, including models added after the bundled catalog. Changes appear at session start, model selection, or the next turn.
+
+### Upgrade
+
+Upgrade Pi to 1.5.2 or later in the 1.x line before updating the extension; earlier versions are no longer supported. Reload Pi after updating. Alias configuration and stored credentials are unchanged.
+
+## [0.2.3]
 
 ### Changed
 

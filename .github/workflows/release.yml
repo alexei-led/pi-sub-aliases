@@ -44,7 +44,7 @@ jobs:
             core.setOutput("name", pkg.name);
             core.setOutput("version", pkg.version);
             core.setOutput("tag", tag);
-            core.setOutput("release_name", `${pkg.name} ${pkg.version}`);
+            core.setOutput("release_name", tag);
             core.setOutput("prerelease", String(pkg.version.includes("-")));
       - name: Ensure tag is on main
         run: |
@@ -106,13 +106,15 @@ jobs:
           script: |
             const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
             const tag = process.env.RELEASE_TAG;
-            const body = [
-              "## Package",
-              `- Name: \`${process.env.PACKAGE_NAME}\``,
-              `- Version: \`${process.env.PACKAGE_VERSION}\``,
-              `- Tag: \`${tag}\``,
-              `- Commit: \`${process.env.GITHUB_SHA}\``,
-            ].join("\n");
+            const fs = require("node:fs");
+            const changelog = fs.readFileSync("CHANGELOG.md", "utf8");
+            const version = `[${process.env.PACKAGE_VERSION}]`;
+            const heading = `## ${version}`;
+            const sections = changelog.split(/^## /m);
+            const section = sections.find((part) => part.split("\n", 1)[0] === version);
+            if (!section) throw new Error(`Missing changelog section ${heading}`);
+            const body = section.slice(version.length).trim();
+            if (!body) throw new Error(`Empty changelog section ${heading}`);
 
             try {
               const { data: existing } = await github.rest.repos.getReleaseByTag({
@@ -137,7 +139,6 @@ jobs:
               target_commitish: process.env.GITHUB_SHA,
               name: process.env.RELEASE_NAME,
               body,
-              generate_release_notes: true,
               prerelease: process.env.PRERELEASE === "true",
               make_latest: process.env.PRERELEASE === "true" ? "false" : "true",
             });
